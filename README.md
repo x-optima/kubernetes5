@@ -26,16 +26,19 @@ kubectl describe pods data-exchange
 В описании пода видно два контейнера и том `shared-data` типа `emptyDir`.
 
 ![Скриншот 1](screenshots/scr1_1.png)
+![Скриншот 2](screenshots/scr1_2.png)
+![Скриншот 3](screenshots/scr1_3.png)
+![Скриншот 4](screenshots/scr1_4.png)
 
 Чтение файла из второго контейнера:
 
 ```bash
-kubectl exec -it <имя пода> -c multitool -- tail -f /shared/data.txt
+kubectl exec -it data-exchange-77db77f5bb-qvwtt -c multitool -- tail -f /shared/data.txt
 ```
 
 Новая строка с датой появляется раз в 5 секунд: её дописывает первый контейнер.
 
-![Скриншот 2](screenshots/scr1_2.png)
+![Скриншот 5](screenshots/scr1_5.png)
 
 ## Ручное создание PersistentVolume и PersistentVolumeClaim
 
@@ -52,18 +55,20 @@ kubectl get pvc
 kubectl describe pvc pvc-hostpath
 ```
 
-Заявка переходит в состояние `Bound`, в её описании видны имя тома и объём 1Gi.
+Заявка переходит в состояние `Bound`, в её описании видны имя тома и объём 1Gi. Сразу после
+создания она на пару секунд может показывать `Pending` с нулевой ёмкостью — в этот момент
+связывание ещё не завершено, повторная команда показывает окончательное состояние.
 
-![Скриншот 3](screenshots/scr2_1.png)
+![Скриншот 6](screenshots/scr2_1.png)
 
 Проверка, что второй контейнер читает данные с постоянного тома:
 
 ```bash
 kubectl get pods
-kubectl exec -it <имя пода> -c multitool -- tail -f /data/data.txt
+kubectl exec -it deploy/data-exchange-pvc -c multitool -- tail -f /data/data.txt
 ```
 
-![Скриншот 4](screenshots/scr2_2.png)
+![Скриншот 7](screenshots/scr2_2.png)
 
 Удаление пода и заявки, чтобы посмотреть на состояние тома:
 
@@ -78,7 +83,7 @@ kubectl describe pv pv-hostpath
 и том, и данные, поэтому в поле `Claim` остаётся имя удалённого PVC `pvc-hostpath`.
 Чтобы занять том снова, нужно убрать `claimRef` или создать том заново.
 
-![Скриншот 5](screenshots/scr2_3.png)
+![Скриншот 8](screenshots/scr2_3.png)
 
 Проверка файла на узле кластера:
 
@@ -88,6 +93,8 @@ sudo cat /tmp/k8s-pv-data/data.txt
 ```
 
 Файл на месте: `hostPath` — это обычная папка на узле, данные не зависят от объектов кластера.
+
+![Скриншот 9](screenshots/scr2_4.png)
 
 Удаление самого тома и повторная проверка папки:
 
@@ -99,14 +106,12 @@ sudo ls -l /tmp/k8s-pv-data
 Файл остаётся и после удаления PV: удаляется только запись о томе, папка на узле не меняется.
 С политикой `Delete` том очищался бы вместе с заявкой.
 
-![Скриншот 6](screenshots/scr2_4.png)
-
-![Скриншот 7](screenshots/scr2_5.png)
+![Скриншот 10](screenshots/scr2_5.png)
 
 ## StorageClass и PersistentVolumeClaim
 
-Класс `manual-hostpath` использует провижионер `kubernetes.io/no-provisioner`: тома кластер
-сам не создаёт, том `pv-sc-hostpath` описан здесь же вручную. Без него заявка осталась бы
+Класс `manual-hostpath` использует провизионер `kubernetes.io/no-provisioner`: тома кластер
+сам не создаёт, том `pv-sc-hostpath` описан вручную. Без него заявка осталась бы
 в состоянии `Pending`.
 
 ```bash
@@ -116,16 +121,20 @@ kubectl get pv
 kubectl get pvc
 ```
 
-Режим `WaitForFirstConsumer` связывает заявку с томом только при появлении пода. Сразу после
-применения заявка в `Pending`, после запуска пода — в `Bound`.
+Режим `WaitForFirstConsumer` связывает заявку с томом только при появлении пода: пока под
+не создан, заявка стоит в `Pending`, а с запуском пода становится `Bound`.
 
-![Скриншот 8](screenshots/scr3_1.png)
+Политики у класса и у тома различаются. Политика `Delete` в `kubectl get sc` относится к томам,
+которые кластер создаёт сам; у нашего тома политика своя — `Retain`, поэтому при удалении заявки
+он останется на месте вместе с данными.
+
+![Скриншот 11](screenshots/scr3_1.png)
 
 Чтение файла из второго контейнера, как и в предыдущем разделе:
 
 ```bash
 kubectl get pods
-kubectl exec -it <имя пода> -c multitool -- tail -f /data/data.txt
+kubectl exec -it deploy/data-exchange-sc -c multitool -- tail -f /data/data.txt
 ```
 
-![Скриншот 9](screenshots/scr3_2.png)
+![Скриншот 12](screenshots/scr3_2.png)

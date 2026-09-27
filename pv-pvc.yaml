@@ -1,6 +1,8 @@
 # pv-pvc.yaml
+
 # Ручной том на узле кластера и заявка на него.
 # Три объекта: PersistentVolume, PersistentVolumeClaim, Deployment.
+
 ---
 apiVersion: v1
 kind: PersistentVolume
