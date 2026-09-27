@@ -1,0 +1,40 @@
+# containers-data-exchange.yaml
+# Два контейнера одного пода обмениваются данными через общий том emptyDir.
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: data-exchange
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: data-exchange
+  template:
+    metadata:
+      labels:
+        app: data-exchange
+    spec:
+      containers:
+      # пишет дату в общий файл каждые 5 секунд
+      - name: busybox
+        image: busybox:1.36
+        command: ["/bin/sh", "-c"]
+        args:
+          - "touch /shared/data.txt; while true; do date >> /shared/data.txt; sleep 5; done"
+        volumeMounts:
+        - name: shared-data
+          mountPath: /shared
+      # читает тот же файл
+      - name: multitool
+        image: wbitt/network-multitool
+        command: ["/bin/sh", "-c"]
+        args:
+          - "touch /shared/data.txt; tail -f /shared/data.txt"
+        volumeMounts:
+        - name: shared-data
+          mountPath: /shared
+      volumes:
+      # создаётся и удаляется вместе с подом
+      - name: shared-data
+        emptyDir: {}

@@ -1,0 +1,25 @@
+# .gitignore
+
+# Ключи доступа к кластеру: по ним можно управлять кластером целиком
+*.kubeconfig
+kubeconfig
+.kube/
+
+# Переменные окружения и другие секреты
+.env
+.env.*
+*.pem
+*.key
+*.crt
+
+# Файлы операционной системы и редакторов
+*.log
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*~
+
+# Заметки
+LONGRID.md
